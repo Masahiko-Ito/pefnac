@@ -81,7 +81,7 @@ typedef void (*SIG_PF) (int);
 char *Amsg = "CANFEP version 1.0 by Nozomu Kobayashi.\nToggleKey=^O\n";
 char *Emsg = "CANFEP done!!\n";
 #else
-char *Amsg = "PEFNAC version 0.4 by Masahiko Ito.\nToggleKey=^O\n";
+char *Amsg = "PEFNAC version 0.5.1 by Masahiko Ito.\nToggleKey=^O\n";
 char *Emsg = "PEFNAC done!!\n";
 #endif
 char *Nohs[] = { "kon", "jfbterm", (char *) NULL };
