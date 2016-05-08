@@ -3,6 +3,11 @@ LIBS=-lcanna -ltermcap
 CFLAGS=-O2 -g -Wall -I/usr/local/canna/include
 LDFLAGS=-L/usr/local/canna/lib
 
+#CC=gcc
+#LIBS=-lcanna -lncurses
+#CFLAGS=-O2 -g -Wall -I/usr/local/canna/include -I/usr/local/include/ncurses -I/usr/local/include
+#LDFLAGS=-L/usr/local/canna/lib -L/usr/local/lib
+
 TARGET=pefnac
 OBJS=pefnac.o
 

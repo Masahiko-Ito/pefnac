@@ -43,6 +43,7 @@
 #include <sys/file.h>
 #include <sys/signal.h>
 #include <sys/wait.h>
+#include <errno.h>
 #if defined(sun) || defined(__NetBSD__)
 #include <termcap.h>
 #else
@@ -76,7 +77,7 @@ typedef void (*SIG_PF) (int);
 char *Amsg = "CANFEP version 1.0 by Nozomu Kobayashi.\nToggleKey=^O\n";
 char *Emsg = "CANFEP done!!\n";
 #else
-char *Amsg = "PEFNAC version 0.1 by Masahiko Ito.\nToggleKey=^O\n";
+char *Amsg = "PEFNAC version 0.2 by Masahiko Ito.\nToggleKey=^O\n";
 char *Emsg = "PEFNAC done!!\n";
 #endif
 char *Nohs[] = { "kon", "jfbterm", (char *) NULL };
@@ -273,6 +274,7 @@ char *argv[];
 				write(1, obuf, cc);
 			}
 			done();
+			exit(0);
 		}
 		t = open("/dev/tty", O_RDWR);
 		if (t >= 0) {
@@ -402,6 +404,7 @@ int ch;
 void dPty()
 {
 	done();
+	exit(0);
 }
 
 /* 終了時に呼ばれる */
@@ -419,6 +422,7 @@ void fail()
 {
 	kill(0, SIGTERM);
 	done();
+	exit(1);
 }
 
 /* マスタデバイスを取る */
@@ -478,7 +482,7 @@ void getslave()
 	}
 	ioctl(Slave, TIOCSWINSZ, (char *) &Win);
 	setsid();
-#if !defined(sun) && !defined(__NetBSD__)
+#if !defined(sun)
 	close(Slave);
 	Slave = open(Line, O_RDWR);
 	if (Slave < 0) {
@@ -708,9 +712,14 @@ void loop()
 	while (1) {
 
 		/* 一文字受けとる */
+		errno = 0;
 		c = getchar();
 		if (c == EOF) {
-			continue;
+			if (errno == 0){
+				continue;
+			}else{
+				break;
+			}
 		}
 
 		/* 常に C-o を入力モード変更キーにしてしまう (Vine の ~/.canna 対策) */

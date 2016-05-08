@@ -1,0 +1,4 @@
+2008.08.06 Ver.0.2 o Makefile修正(NetBSDの場合、ncursesでないとresizeに追従しない場合がある？)
+                   o slave device取得時のNetBSDに関する部分を修正
+                   o done()直後のexit()を誤って削除していたのを復活
+2008.08.03 Ver.0.1 o 初版
