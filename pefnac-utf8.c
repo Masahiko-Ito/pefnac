@@ -1,6 +1,6 @@
 /*
- *  pefnac - canfep-like canna frontend processor
- *           Created by Masahiko Ito <m-ito@myh.no-ip.org>
+ *  pefnac-utf8 - canfep-like canna frontend processor for UTF-8
+ *                Created by Masahiko Ito <m-ito@myh.no-ip.org>
  *
  *  pefnacはcanfep(by Nozomu Kobayashi <nozomu@cup.com>)をオリジナルとしています。
  *
@@ -16,6 +16,9 @@
  *
  *    http://www.geocities.co.jp/SiliconValley-Bay/7584/canfep/
  *
+ *  UTF-8対応は以下のパッチを参考にしています。
+ *
+ *    http://gentoo.osuosl.org/distfiles/canfep_utf8.diff
  *
  *  本ソースは以下の処理により整形されています。
  *
@@ -53,6 +56,8 @@
 #else
 #include <term.h>
 #endif
+#include <errno.h>
+#include <iconv.h>
 #include <canna/jrkanji.h>
 
 /*
@@ -125,6 +130,7 @@ struct termios Stt;
 struct winsize Win;
 jrKanjiStatusWithValue Ksv;
 jrKanjiStatus Ks;
+iconv_t Eucjp_to_utf8_cd;
 unsigned char SaveMode[PEFNAC_BUFSIZ];
 unsigned char CurrentMode[PEFNAC_BUFSIZ];
 
@@ -151,6 +157,8 @@ void henkan();
 void delhenkan();
 void mode();
 void gline();
+void write_utf8();
+char *iconv_string();
 void loop();
 
 /*
@@ -597,15 +605,88 @@ char **area;
 	}
 }
 
+void write_utf8(int fd, char *p, int len)
+{
+	if (Eucjp_to_utf8_cd == (iconv_t) - 1)
+		write(fd, p, strlen(p));
+	else {
+		char *putf8 = iconv_string(Eucjp_to_utf8_cd, p, len);
+		write(fd, putf8, strlen(putf8));
+		free(putf8);
+	}
+}
+
+char *iconv_string(iconv_t fd, char *str, int slen)
+{
+	char *from;
+	size_t fromlen;
+	char *to;
+	size_t tolen;
+	size_t len = 0;
+	size_t done = 0;
+	char *result = NULL;
+	char *p;
+
+	from = (char *) str;
+	fromlen = slen;
+	for (;;) {
+		if (len == 0 || errno == E2BIG) {
+			/* Allocate enough room for most conversions.  When re-allocating
+			 * increase the buffer size. */
+			len = len + fromlen * 2 + 40;
+			p = (char *) malloc((unsigned) len);
+			if (p != NULL && done > 0)
+				memcpy(p, result, done);
+			free(result);
+			result = p;
+			if (result == NULL)	/* out of memory */
+				break;
+		}
+
+		to = (char *) result + done;
+		tolen = len - done - 2;
+		/* Avoid a warning for systems with a wrong iconv() prototype by
+		 * casting the second argument to void *. */
+		if (iconv(fd, &from, &fromlen, &to, &tolen) !=
+		    (size_t) - 1) {
+			/* Finished, append a NUL. */
+			*to = 0;
+			break;
+		}
+		/* Check both ICONV_EILSEQ and EILSEQ, because the dynamically loaded
+		 * iconv library may use one of them. */
+		if (errno == EILSEQ || errno == EILSEQ) {
+			/* Can't convert: insert a '?' and skip a character.  This assumes
+			 * conversion from 'encoding' to something else.  In other
+			 * situations we don't know what to skip anyway. */
+			*to++ = *from++;
+			fromlen -= 1;
+		} else if (errno != E2BIG) {
+			/* conversion failed */
+			free(result);
+			result = NULL;
+			break;
+		}
+		/* Not enough room or skipping illegal sequence. */
+		done = to - (char *) result;
+	}
+	return result;
+}
+
 /* コンストラクタだよん */
 void Canna()
 {
+	char *p_lang = getenv("LANG");
+
 	/* かんなの初期化 */
 	jrKanjiControl(0, KC_INITIALIZE, 0);
 	jrKanjiControl(0, KC_SETAPPNAME, "pefnac");
 	jrKanjiControl(0, KC_SETBUNSETSUKUGIRI, (char *) &Ksv);
 	jrKanjiControl(0, KC_QUERYMODE, (char *) SaveMode);
 	jrKanjiControl(0, KC_SETWIDTH, (char *) 72);
+
+	if (p_lang == NULL || strstr(p_lang, "-8"))
+		Eucjp_to_utf8_cd = iconv_open("utf-8", "euc-jp");
 
 	mode(SaveMode);
 }
@@ -617,6 +698,9 @@ void dCanna()
 	jrKanjiControl(0, KC_KILL, (char *) &Ksv);
 	jrKanjiControl(0, KC_FINALIZE, 0);
 
+	if (Eucjp_to_utf8_cd != (iconv_t) - 1)
+		iconv_close(Eucjp_to_utf8_cd);
+
 	mode(SaveMode);
 }
 
@@ -624,7 +708,7 @@ void dCanna()
 void kakutei(p)
 unsigned char *p;
 {
-	write(Wfd, p, strlen((char *) p));
+	write_utf8(Wfd, (char *) p, strlen((char *) p));
 }
 
 /* 変換中(未確定)の文字列を出力する */
@@ -637,13 +721,14 @@ int len;
 	tputs(Sc, 1, put1ch);
 	tputs(Rc, 1, put1ch);
 	tputs(Us, 1, put1ch);
-	write(Rfd, p, pos);
+	write_utf8(Rfd, (char *) p, pos);
 	tputs(Ue, 1, put1ch);
 	tputs(So, 1, put1ch);
-	write(Rfd, p + pos, len);
+	write_utf8(Rfd, (char *) p + pos, len);
 	tputs(Se, 1, put1ch);
 	tputs(Us, 1, put1ch);
-	write(Rfd, p + pos + len, strlen((char *) p + pos + len));
+	write_utf8(Rfd, (char *) p + pos + len,
+		   strlen((char *) p + pos + len));
 	tputs(Ue, 1, put1ch);
 }
 
@@ -677,7 +762,7 @@ unsigned char *p;
 		tputs(tgoto(Cm, 0, tgetnum("li") - 1), 1, put1ch);
 	}
 	tputs(Ce, 1, put1ch);
-	write(Rfd, p, strlen((char *) p));
+	write_utf8(Rfd, (char *) p, strlen((char *) p));
 	if (Hs) {
 		tputs(Fs, 1, put1ch);
 	} else {
@@ -700,13 +785,14 @@ int len;
 		tputs(tgoto(Cm, 0, tgetnum("li") - 1), 1, put1ch);
 	}
 	tputs(Ce, 1, put1ch);
-	write(Rfd, p, strlen((char *) p));
+	write_utf8(Rfd, (char *) p, strlen((char *) p));
 	write(Rfd, " ", 1);
-	write(Rfd, l, pos);
+	write_utf8(Rfd, (char *) l, pos);
 	tputs(So, 1, put1ch);
-	write(Rfd, l + pos, len);
+	write_utf8(Rfd, (char *) l + pos, len);
 	tputs(Se, 1, put1ch);
-	write(Rfd, l + pos + len, strlen((char *) l + pos + len));
+	write_utf8(Rfd, (char *) l + pos + len,
+		   strlen((char *) l + pos + len));
 	if (Hs) {
 		tputs(Fs, 1, put1ch);
 	} else {

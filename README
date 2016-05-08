@@ -33,6 +33,9 @@ canuum,skkfep,pofep等と共に、コンソール環境での日本語入力を支えているプ
 として、公開したいと思います。
 
 Download: 
+  2012.10.02 http://myh.no-ip.org/~m-ito/pefnac/pefnac-0.5.tar.gz(utf-8版追加)
+             (*2)のパッチを取り込まさせていただきました。
+  2010.05.23 http://myh.no-ip.org/~m-ito/pefnac/pefnac-0.4.tar.gz
   2010.03.15 http://myh.no-ip.org/~m-ito/pefnac/pefnac-0.3.tar.gz
   2008.08.06 http://myh.no-ip.org/~m-ito/pefnac/pefnac-0.2.tar.gz
   2008.08.03 http://myh.no-ip.org/~m-ito/pefnac/pefnac-0.1.tar.gz
@@ -44,3 +47,5 @@ Download:
 -----------------------------------------------------------------------
 (*1) のぞむの Linux なウェブページ
      http://www.geocities.co.jp/SiliconValley-Bay/7584/canfep/
+(*2) UTF-8 patch for canfep
+     http://gentoo.osuosl.org/distfiles/canfep_utf8.diff
