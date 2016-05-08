@@ -1,3 +1,4 @@
+2010.05.23 Ver.0.4 o CTRL+SPACE等でのNULL入力を受け付ける(for Mark set of emacs)
 2010.03.15 Ver.0.3 o Unix98 PTY support(default)
 2008.08.06 Ver.0.2 o Makefile修正(NetBSDの場合、ncursesでないとresizeに追従しない場合がある？)
                    o slave device取得時のNetBSDに関する部分を修正

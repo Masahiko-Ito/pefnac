@@ -749,6 +749,13 @@ void loop()
 			}
 		}
 
+		/* CTRL+SPACE(null) の入力を受け付ける for emacs */
+		if (length == 0 && c == '\0') {
+			mode(CurrentMode);
+			write(Wfd, "\0", 1);
+			continue;
+		}
+
 		/* 常に C-o を入力モード変更キーにしてしまう (Vine の ~/.canna 対策) */
 		if (length == 0 && c == FEP_KEY) {
 			if (strcmp((char *) SaveMode, (char *) CurrentMode)
