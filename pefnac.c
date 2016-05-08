@@ -29,6 +29,10 @@
  * Header files
  */
 
+#if defined(UNIX98)
+#	define _XOPEN_SOURCE
+#	define _GNU_SOURCE
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -77,7 +81,7 @@ typedef void (*SIG_PF) (int);
 char *Amsg = "CANFEP version 1.0 by Nozomu Kobayashi.\nToggleKey=^O\n";
 char *Emsg = "CANFEP done!!\n";
 #else
-char *Amsg = "PEFNAC version 0.2 by Masahiko Ito.\nToggleKey=^O\n";
+char *Amsg = "PEFNAC version 0.3 by Masahiko Ito.\nToggleKey=^O\n";
 char *Emsg = "PEFNAC done!!\n";
 #endif
 char *Nohs[] = { "kon", "jfbterm", (char *) NULL };
@@ -299,7 +303,7 @@ char *argv[];
 		if (argc > 1) {
 			execvp(argv[1], &argv[1]);
 		} else {
-			execl(shell, strrchr(shell, '/') + 1, 0);
+			execl(shell, strrchr(shell, '/') + 1, NULL);
 		}
 		perror(shell);
 		fail();
@@ -428,6 +432,13 @@ void fail()
 /* マスタデバイスを取る */
 void getmaster()
 {
+#if defined(UNIX98)
+	Master = getpt();
+	tcgetattr(0, &Tt);
+	Stt = Tt;
+	Tt.c_iflag &= ~ISTRIP;
+	ioctl(0, TIOCGWINSZ, (char *) &Win);
+#else
 	struct stat stb;
 	char *pty;
 	char *p;
@@ -465,11 +476,26 @@ void getmaster()
 
 	printf("Out of pty's\n");
 	fail();
+#endif
 }
 
 /* スレーブデバイスを取る */
 void getslave()
 {
+#if defined(UNIX98)
+	char *pty;
+
+	pty = ptsname(Master);
+	grantpt(Master);
+	unlockpt(Master);
+	Slave = open(pty, O_RDWR);
+	tcsetattr(Slave, TCSAFLUSH, &Tt);
+	if (!Hs) {
+		Win.ws_row--;
+	}
+	ioctl(Slave, TIOCSWINSZ, (char *) &Win);
+	setsid();
+#else
 	Line[strlen("/dev/")] = 't';
 	Slave = open(Line, O_RDWR);
 	if (Slave < 0) {
@@ -490,6 +516,7 @@ void getslave()
 		fail();
 	}
 #endif
+#endif	/* UNIX98 */
 }
 
 /* 仮想端末の初期化 */

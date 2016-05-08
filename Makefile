@@ -1,6 +1,6 @@
 CC=gcc
 LIBS=-lcanna -ltermcap
-CFLAGS=-O2 -g -Wall -I/usr/local/canna/include
+CFLAGS=-O2 -g -Wall -I/usr/local/canna/include -DUNIX98
 LDFLAGS=-L/usr/local/canna/lib
 
 #CC=gcc
