@@ -1,3 +1,4 @@
+2023.11.25 Ver.0.5.2 o linkするライブラリをlibtermcapからlibncurseswに変更
 2012.10.27 Ver.0.5.1 o メッセージ中のバージョンを修正
 2012.10.02 Ver.0.5   o UTF-8版(pefnac-utf8)追加
 2010.05.23 Ver.0.4   o CTRL+SPACE等でのNULL入力を受け付ける(for Mark set of emacs)
